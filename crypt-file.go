@@ -16,7 +16,7 @@ import (
 var infile string
 var outfile string
 var decrypt bool
-var passwordEnv = "ENCRYPT_DUMP_PWD"
+var passwordEnv = "CRYPT_FILE_PWD"
 
 func init() {
 	flag.StringVar(&infile, "i", "", "input file")
