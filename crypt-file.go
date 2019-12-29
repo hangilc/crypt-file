@@ -1,15 +1,18 @@
 package main
 
 import (
+	"crypto/rand"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 
 	"github.com/hangilc/crypt-file/internal"
 )
 
+var decrypt = flag.Bool("d", false, "decrypt")
 var outfile = flag.String("o", "", "output file")
 
 func makeVersionHeader(ver int) []byte {
@@ -35,25 +38,39 @@ func readVersion(buf []byte) (ver int, rem []byte, err error) {
 func main() {
 	flag.Parse()
 	var err error
-	key, err := internal.ReadPassword()
-	if err != nil {
-		panic(nil)
-	}
-	fmt.Printf("%s\n", string(key))
-	var output io.Writer
-	if *outfile == "" {
-		output = os.Stdout
-	} else {
-		f, err := os.Create(*outfile)
+	key := []byte("plaintextpassword")[:16]
+	if *decrypt {
+		enc, err := ioutil.ReadFile(flag.Args()[0])
 		if err != nil {
 			panic(err)
 		}
-		defer f.Close()
-		output = f
-	}
-	ver := 1
-	_, err = output.Write(makeVersionHeader(ver))
-	if err != nil {
-		panic(err)
+		plain, err := internal.Decrypt(key, enc)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("%s\n", plain)
+	} else {
+		plaintext := []byte("hello, world")
+		nonce := make([]byte, 12)
+		_, err = rand.Read(nonce)
+		if err != nil {
+			panic(err)
+		}
+		enc, err := internal.Encrypt(internal.DefaultVersion, key, nonce, plaintext)
+		var output io.Writer
+		if *outfile == "" {
+			output = os.Stdout
+		} else {
+			f, err := os.Create(*outfile)
+			if err != nil {
+				panic(err)
+			}
+			defer f.Close()
+			output = f
+		}
+		_, err = output.Write(enc)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
