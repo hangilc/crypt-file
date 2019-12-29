@@ -1,81 +1,59 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"crypto/sha256"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"os"
+
+	"github.com/hangilc/crypt-file/internal"
 )
 
-var infile string
-var outfile string
-var decrypt bool
-var passwordEnv = "CRYPT_FILE_PWD"
+var outfile = flag.String("o", "", "output file")
 
-func init() {
-	flag.StringVar(&infile, "i", "", "input file")
-	flag.StringVar(&outfile, "o", "", "output file")
-	flag.BoolVar(&decrypt, "d", false, "decrypt instead of encryp")
+func makeVersionHeader(ver int) []byte {
+	buf := make([]byte, 3)
+	buf[0] = 'C'
+	buf[1] = 'F'
+	buf[2] = byte(ver)
+	return buf
+}
+
+func readVersion(buf []byte) (ver int, rem []byte, err error) {
+	if len(buf) < 3 {
+		err = errors.New("Cannot read version header")
+		return
+	}
+	if !(buf[0] == 'C' && buf[1] == 'F') {
+		err = errors.New("It is not crypt-file encoded file")
+		return
+	}
+	return int(buf[2]), buf[3:], nil
 }
 
 func main() {
 	flag.Parse()
-	password := os.Getenv(passwordEnv)
-	if password == "" {
-		fmt.Fprintf(os.Stderr, "Cannot read password from: $%s\n", passwordEnv)
-		os.Exit(1)
-	}
-	key := sha256.Sum256([]byte(password))
-
-	var input []byte
 	var err error
-	if infile == "" {
-		input, err = ioutil.ReadAll(os.Stdin)
-	} else {
-		input, err = ioutil.ReadFile(infile)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	block, err := aes.NewCipher(key[:])
+	key, err := internal.ReadPassword()
 	if err != nil {
-		log.Fatal(err)
+		panic(nil)
 	}
-
-	var output []byte
-	if decrypt {
-		iv := input[:aes.BlockSize]
-		output = make([]byte, len(input)-aes.BlockSize)
-		ds := cipher.NewCFBDecrypter(block, iv)
-		ds.XORKeyStream(output, input[aes.BlockSize:])
+	fmt.Printf("%s\n", string(key))
+	var output io.Writer
+	if *outfile == "" {
+		output = os.Stdout
 	} else {
-		ciphertext := make([]byte, aes.BlockSize+len(input))
-		iv := ciphertext[:aes.BlockSize]
-		_, err = io.ReadFull(rand.Reader, iv)
+		f, err := os.Create(*outfile)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
-		stream := cipher.NewCFBEncrypter(block, iv)
-		stream.XORKeyStream(ciphertext[aes.BlockSize:], input)
-		output = ciphertext
+		defer f.Close()
+		output = f
 	}
-
-	if outfile == "" {
-		_, err = os.Stdout.Write(output)
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		err = ioutil.WriteFile(outfile, output, 0755)
-		if err != nil {
-			log.Fatal(err)
-		}
+	ver := 1
+	_, err = output.Write(makeVersionHeader(ver))
+	if err != nil {
+		panic(err)
 	}
 }
