@@ -3,12 +3,10 @@ package internal
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"fmt"
 )
 
 func Decrypt(key []byte, encrypted []byte) ([]byte, error) {
 	nonce, rest, err := ExtractHeader(encrypted)
-	fmt.Printf("%v\n", nonce)
 	if err != nil {
 		return nil, err
 	}

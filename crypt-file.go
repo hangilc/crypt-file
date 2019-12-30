@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/rand"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -12,35 +11,48 @@ import (
 	"github.com/hangilc/crypt-file/internal"
 )
 
+var keyFile = flag.String("k", "", "key file")
 var decrypt = flag.Bool("d", false, "decrypt")
 var outfile = flag.String("o", "", "output file")
 
-func makeVersionHeader(ver int) []byte {
-	buf := make([]byte, 3)
-	buf[0] = 'C'
-	buf[1] = 'F'
-	buf[2] = byte(ver)
-	return buf
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [options] [INPUT]\n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), "If INPUT is not specified, stdin becomes INPUT\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "[options]\n")
+		flag.PrintDefaults()
+	}
 }
 
-func readVersion(buf []byte) (ver int, rem []byte, err error) {
-	if len(buf) < 3 {
-		err = errors.New("Cannot read version header")
-		return
+func readInput() ([]byte, error) {
+	if len(flag.Args()) == 0 {
+		return ioutil.ReadAll(os.Stdin)
+	} else {
+		return ioutil.ReadFile(flag.Args()[0])
 	}
-	if !(buf[0] == 'C' && buf[1] == 'F') {
-		err = errors.New("It is not crypt-file encoded file")
-		return
-	}
-	return int(buf[2]), buf[3:], nil
 }
 
 func main() {
 	flag.Parse()
 	var err error
-	key := []byte("plaintextpassword")[:16]
+	var key []byte
+	if *keyFile != "" {
+		key, err = internal.ReadKeyFile(*keyFile)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if len(key) != 16 {
+		switch len(key) {
+		case 0:
+			fmt.Fprintf(os.Stderr, "Cannot find password")
+		default:
+			fmt.Fprintf(os.Stderr, "Password size is not 16 (actually %d)\n", len(key))
+		}
+		os.Exit(1)
+	}
 	if *decrypt {
-		enc, err := ioutil.ReadFile(flag.Args()[0])
+		enc, err := readInput()
 		if err != nil {
 			panic(err)
 		}
@@ -50,7 +62,10 @@ func main() {
 		}
 		fmt.Printf("%s\n", plain)
 	} else {
-		plaintext := []byte("hello, world")
+		plaintext, err := readInput()
+		if err != nil {
+			panic(err)
+		}
 		nonce := make([]byte, 12)
 		_, err = rand.Read(nonce)
 		if err != nil {
