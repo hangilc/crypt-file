@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"compress/zlib"
-	"crypto/rand"
 	"flag"
 	"fmt"
 	"io"
@@ -92,8 +91,7 @@ func main() {
 		w := zlib.NewWriter(&buf)
 		w.Write(plaintext)
 		w.Close()
-		nonce := make([]byte, 12)
-		_, err = rand.Read(nonce)
+		nonce, err := internal.CreateNonce()
 		if err != nil {
 			panic(err)
 		}

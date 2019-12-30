@@ -3,6 +3,7 @@ package internal
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 )
 
 func Encrypt(ver int, key []byte, nonce []byte, plain []byte) ([]byte, error) {
@@ -17,4 +18,13 @@ func Encrypt(ver int, key []byte, nonce []byte, plain []byte) ([]byte, error) {
 	aead, err := cipher.NewGCM(block)
 	ciphertext := aead.Seal(plain[:0], nonce, plain, nil)
 	return append(head, ciphertext...), nil
+}
+
+func CreateNonce() ([]byte, error) {
+	nonce := make([]byte, 12)
+	_, err := rand.Read(nonce)
+	if err != nil {
+		return nil, err
+	}
+	return nonce, nil
 }
