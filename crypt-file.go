@@ -51,6 +51,17 @@ func main() {
 		}
 		os.Exit(1)
 	}
+	var output io.Writer
+	if *outfile == "" {
+		output = os.Stdout
+	} else {
+		f, err := os.Create(*outfile)
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+		output = f
+	}
 	if *decrypt {
 		enc, err := readInput()
 		if err != nil {
@@ -60,7 +71,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("%s\n", plain)
+		output.Write(plain)
 	} else {
 		plaintext, err := readInput()
 		if err != nil {
@@ -72,17 +83,6 @@ func main() {
 			panic(err)
 		}
 		enc, err := internal.Encrypt(internal.DefaultVersion, key, nonce, plaintext)
-		var output io.Writer
-		if *outfile == "" {
-			output = os.Stdout
-		} else {
-			f, err := os.Create(*outfile)
-			if err != nil {
-				panic(err)
-			}
-			defer f.Close()
-			output = f
-		}
 		_, err = output.Write(enc)
 		if err != nil {
 			panic(err)
