@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/zlib"
 	"crypto/rand"
 	"flag"
 	"fmt"
@@ -71,18 +73,34 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		output.Write(plain)
+		b := bytes.NewReader(plain)
+		r, err := zlib.NewReader(b)
+		if err != nil {
+			panic(err)
+		}
+		_, err = io.Copy(output, r)
+		r.Close()
+		if err != nil {
+			panic(err)
+		}
 	} else {
 		plaintext, err := readInput()
 		if err != nil {
 			panic(err)
 		}
+		var buf bytes.Buffer
+		w := zlib.NewWriter(&buf)
+		w.Write(plaintext)
+		w.Close()
 		nonce := make([]byte, 12)
 		_, err = rand.Read(nonce)
 		if err != nil {
 			panic(err)
 		}
-		enc, err := internal.Encrypt(internal.DefaultVersion, key, nonce, plaintext)
+		enc, err := internal.Encrypt(internal.DefaultVersion, key, nonce, buf.Bytes())
+		if err != nil {
+			panic(err)
+		}
 		_, err = output.Write(enc)
 		if err != nil {
 			panic(err)
