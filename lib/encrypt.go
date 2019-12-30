@@ -8,6 +8,10 @@ import (
 )
 
 func Encrypt(key []byte, plain []byte) ([]byte, error) {
+	nonce, err := internal.CreateNonce()
+	if err != nil {
+		return nil, err
+	}
 	head, err := internal.CreateHeader(internal.DefaultVersion, nonce)
 	if err != nil {
 		return nil, err

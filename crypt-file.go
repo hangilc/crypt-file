@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/hangilc/crypt-file/internal"
+	"github.com/hangilc/crypt-file/lib"
 )
 
 var keyFile = flag.String("k", "", "key file")
@@ -91,11 +92,7 @@ func main() {
 		w := zlib.NewWriter(&buf)
 		w.Write(plaintext)
 		w.Close()
-		nonce, err := internal.CreateNonce()
-		if err != nil {
-			panic(err)
-		}
-		enc, err := internal.Encrypt(internal.DefaultVersion, key, nonce, buf.Bytes())
+		enc, err := lib.Encrypt(key, buf.Bytes())
 		if err != nil {
 			panic(err)
 		}
