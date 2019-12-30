@@ -39,7 +39,7 @@ func main() {
 	var err error
 	var key []byte
 	if *keyFile != "" {
-		key, err = internal.ReadKeyFile(*keyFile)
+		key, err = lib.ReadKeyFile(*keyFile)
 		if err != nil {
 			panic(err)
 		}
