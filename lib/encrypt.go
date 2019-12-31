@@ -1,6 +1,8 @@
 package lib
 
 import (
+	"bytes"
+	"compress/zlib"
 	"crypto/aes"
 	"crypto/cipher"
 
@@ -23,4 +25,12 @@ func Encrypt(key []byte, plain []byte) ([]byte, error) {
 	aead, err := cipher.NewGCM(block)
 	ciphertext := aead.Seal(plain[:0], nonce, plain, nil)
 	return append(head, ciphertext...), nil
+}
+
+func CompressAndEncrypt(key []byte, plain []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	w := zlib.NewWriter(&buf)
+	w.Write(plain)
+	w.Close()
+	return Encrypt(key, buf.Bytes())
 }

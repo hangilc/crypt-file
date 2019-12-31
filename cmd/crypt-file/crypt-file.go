@@ -88,11 +88,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		var buf bytes.Buffer
-		w := zlib.NewWriter(&buf)
-		w.Write(plaintext)
-		w.Close()
-		enc, err := lib.Encrypt(key, buf.Bytes())
+		enc, err := lib.CompressAndEncrypt(key, plaintext)
 		if err != nil {
 			panic(err)
 		}
