@@ -8,6 +8,8 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+    "os/user"
+    "path"
 
 	"github.com/hangilc/crypt-file/internal"
 	"github.com/hangilc/crypt-file/lib"
@@ -38,16 +40,21 @@ func main() {
 	flag.Parse()
 	var err error
 	var key []byte
-	if *keyFile != "" {
-		key, err = lib.ReadKeyFile(*keyFile)
-		if err != nil {
-			panic(err)
-		}
-	}
+    if *keyFile == "" {
+        user, err := user.Current()
+        if err != nil {
+            panic(err)
+        }
+        *keyFile = path.Join(user.HomeDir, ".crypt-file", "key.txt")
+    }
+    key, err = lib.ReadKeyFile(*keyFile)
+    if err != nil {
+        panic(err)
+    }
 	if len(key) != 16 {
 		switch len(key) {
 		case 0:
-			fmt.Fprintf(os.Stderr, "Cannot find password")
+			fmt.Fprintf(os.Stderr, "Cannot find password\n")
 		default:
 			fmt.Fprintf(os.Stderr, "Password size is not 16 (actually %d)\n", len(key))
 		}
